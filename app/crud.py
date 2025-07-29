@@ -2,8 +2,6 @@ from sqlalchemy.orm import Session
 from . import models
 from .report_dal import get_report_table, drop_report_table, rename_column, delete_records
 
-
-
 def create_report_type(db: Session, name: str, fields: list[str]):
     rt = models.ReportType(name=name, fields=fields)
     db.add(rt)

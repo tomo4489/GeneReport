@@ -7,4 +7,3 @@ openpyxl
 python-multipart
 openai
 pdfminer.six
-

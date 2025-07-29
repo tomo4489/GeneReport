@@ -53,6 +53,7 @@ async def create_report(request: Request, name: str = Form(...), mode: str = For
             field_list = [line.strip() for line in text.splitlines() if line.strip()][:10]
         else:
             field_list = []
+
 async def index(db: Session = Depends(get_db)):
     rts = crud.get_report_types(db)
     return templates.TemplateResponse("index.html", {"request": {}, "report_types": rts})
@@ -136,14 +137,35 @@ async def download_record_excel(rt_id: int, rec_id: int, db: Session = Depends(g
     headers = {"Content-Disposition": f"attachment; filename=record_{rec_id}.xlsx"}
     return StreamingResponse(output, media_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', headers=headers)
 
+@app.get("/settings/users", response_class=HTMLResponse)
+async def users(request: Request):
+    return templates.TemplateResponse("users.html", {"request": request, "title":"ユーザー管理"})
+
 @app.get("/users", response_class=HTMLResponse)
 async def users(request: Request):
     return templates.TemplateResponse("users.html", {"request": request, "title":"Users", "active":"users"})
 
-
 @app.get("/settings", response_class=HTMLResponse)
 async def settings(request: Request):
     return templates.TemplateResponse("settings.html", {"request": request, "title":"Settings"})
+
+@app.get("/settings/apis", response_class=HTMLResponse)
+async def api_list(request: Request):
+    return templates.TemplateResponse("api_list.html", {"request": request, "title":"API一覧"})
+
+
+from .config import save_openai_config, load_openai_config
+
+@app.get("/settings/openai", response_class=HTMLResponse)
+async def openai_form(request: Request):
+    cfg = load_openai_config()
+    return templates.TemplateResponse("openai_settings.html", {"request": request, "title":"Azure OpenAI設定", "config": cfg})
+
+
+@app.post("/settings/openai")
+async def save_openai(request: Request, endpoint: str = Form(None), key: str = Form(None)):
+    save_openai_config({"endpoint": endpoint, "key": key})
+    return RedirectResponse(url="/settings", status_code=302)
 
 # API endpoint
 @app.post("/api/report/{rt_id}/parse")
