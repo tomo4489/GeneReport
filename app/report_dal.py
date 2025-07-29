@@ -1,5 +1,4 @@
 from sqlalchemy import Table, Column, Integer, MetaData, String
-from sqlalchemy.exc import NoSuchTableError
 from .database import engine
 
 metadata = MetaData(bind=engine)
@@ -34,4 +33,3 @@ def delete_records(report_type_id: int, ids: list[int]):
     table = Table(table_name, metadata, autoload_with=engine)
     stmt = table.delete().where(table.c.id.in_(ids))
     engine.execute(stmt)
-

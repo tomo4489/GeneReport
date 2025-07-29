@@ -49,7 +49,6 @@ async def create_report(request: Request, name: str = Form(...), mode: str = For
             field_list = [f for f in fields if f]
         else:
             field_list = [fields] if fields else []
-
     else:
         contents = await file.read()
         if file.filename.lower().endswith('.xlsx'):
@@ -157,12 +156,23 @@ async def save_openai(request: Request, endpoint: str = Form(None), key: str = F
     return RedirectResponse(url="/settings", status_code=302)
 
 # API endpoint
-@app.post("/api/report/{rt_id}/parse")
-async def api_parse(rt_id: int, text: str = Form(...), db: Session = Depends(get_db)):
-    rt = crud.get_report_type(db, rt_id)
+@app.post("/api/report/{name}/parse")
+async def api_parse(name: str, text: str = Form(...), db: Session = Depends(get_db)):
+    """Parse free text with GPT and store as a new record"""
+    rt = crud.get_report_type_by_name(db, name)
+    if not rt:
+        return {"error": "report type not found"}
     data = parse_text_to_fields(text, rt.fields)
     crud.insert_report_record(db, rt, data)
     return {"status": "ok", "data": data}
+
+@app.get("/api/report/{name}/fields")
+async def api_report_fields(name: str, db: Session = Depends(get_db)):
+    """Return the field list for the specified report"""
+    rt = crud.get_report_type_by_name(db, name)
+    if not rt:
+        return {"error": "report type not found"}
+    return {"fields": rt.fields}
 
 @app.get("/api/report-types")
 async def api_report_types(db: Session = Depends(get_db)):
