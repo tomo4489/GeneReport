@@ -7,6 +7,7 @@ import io
 import csv
 import pandas as pd
 from pdfminer.high_level import extract_text
+
 from .database import Base, engine, SessionLocal
 from . import models, crud
 from .openai_util import parse_text_to_fields
@@ -42,7 +43,13 @@ async def new_report_form(request: Request):
 @app.post("/report-types/new")
 async def create_report(request: Request, name: str = Form(...), mode: str = Form(...), db: Session = Depends(get_db), file: UploadFile = File(None), fields: list[str] = Form(None)):
     if mode == 'manual':
-        field_list = [f for f in fields if f]
+        if not fields:
+            field_list = []
+        elif isinstance(fields, list):
+            field_list = [f for f in fields if f]
+        else:
+            field_list = [fields] if fields else []
+
     else:
         contents = await file.read()
         if file.filename.lower().endswith('.xlsx'):
@@ -53,20 +60,6 @@ async def create_report(request: Request, name: str = Form(...), mode: str = For
             field_list = [line.strip() for line in text.splitlines() if line.strip()][:10]
         else:
             field_list = []
-
-async def index(db: Session = Depends(get_db)):
-    rts = crud.get_report_types(db)
-    return templates.TemplateResponse("index.html", {"request": {}, "report_types": rts})
-
-
-@app.get("/report-types/new", response_class=HTMLResponse)
-async def new_report_form():
-    return templates.TemplateResponse("new_report.html", {"request": {}})
-
-
-@app.post("/report-types/new")
-async def create_report(name: str = Form(...), fields: str = Form(...), db: Session = Depends(get_db)):
-    field_list = [f.strip() for f in fields.split(',') if f.strip()]
     crud.create_report_type(db, name, field_list)
     return RedirectResponse(url="/", status_code=302)
 
@@ -76,11 +69,6 @@ async def show_records(request: Request, rt_id: int, db: Session = Depends(get_d
     rt = crud.get_report_type(db, rt_id)
     records = crud.fetch_report_records(db, rt)
     return templates.TemplateResponse("records.html", {"request": request, "rt": rt, "records": records, "title":rt.name, "active":"list"})
-
-async def show_records(rt_id: int, db: Session = Depends(get_db)):
-    rt = crud.get_report_type(db, rt_id)
-    records = crud.fetch_report_records(db, rt)
-    return templates.TemplateResponse("records.html", {"request": {}, "rt": rt, "records": records})
 
 @app.post("/report-types/{rt_id}/upload")
 async def upload_excel(rt_id: int, file: UploadFile = File(...), db: Session = Depends(get_db)):
@@ -94,6 +82,11 @@ async def upload_excel(rt_id: int, file: UploadFile = File(...), db: Session = D
 
 @app.post("/report-types/{rt_id}/records/{rec_id}/delete")
 async def delete_record(rt_id: int, rec_id: int, db: Session = Depends(get_db)):
+    crud.delete_report_records(db, crud.get_report_type(db, rt_id), [rec_id])
+    return RedirectResponse(url=f"/report-types/{rt_id}", status_code=302)
+
+@app.get("/report-types/{rt_id}/records/{rec_id}/delete")
+async def delete_record_get(rt_id: int, rec_id: int, db: Session = Depends(get_db)):
     crud.delete_report_records(db, crud.get_report_type(db, rt_id), [rec_id])
     return RedirectResponse(url=f"/report-types/{rt_id}", status_code=302)
 
@@ -140,10 +133,6 @@ async def download_record_excel(rt_id: int, rec_id: int, db: Session = Depends(g
 @app.get("/settings/users", response_class=HTMLResponse)
 async def users(request: Request):
     return templates.TemplateResponse("users.html", {"request": request, "title":"ユーザー管理"})
-
-@app.get("/users", response_class=HTMLResponse)
-async def users(request: Request):
-    return templates.TemplateResponse("users.html", {"request": request, "title":"Users", "active":"users"})
 
 @app.get("/settings", response_class=HTMLResponse)
 async def settings(request: Request):
