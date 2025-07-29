@@ -1,0 +1,12 @@
+{% extends 'base.html' %}
+{% block content %}
+<h1>API一覧</h1>
+<ul>
+  <li><strong>GET /api/report-types</strong> - 登録されている報告書名の一覧を取得</li>
+  <li><strong>POST /api/report/{name}/record</strong> - 指定した報告書へレコードを追加
+    <pre>{"field1": "value", ...}</pre></li>
+  <li><strong>POST /api/report/{rt_id}/parse</strong> - テキストを解析してレコードを保存
+    <pre>text=... (form field)</pre></li>
+</ul>
+<a href="/settings" class="btn btn-secondary">戻る</a>
+{% endblock %}
