@@ -15,3 +15,9 @@ uvicorn app.main:app --reload
 ```
 
 Set `OPENAI_API_KEY` environment variable to enable GPT parsing.
+
+### API Endpoints
+
+- `GET /api/report-types` - list report names
+- `POST /api/report/{name}/record` - create record by report name
+

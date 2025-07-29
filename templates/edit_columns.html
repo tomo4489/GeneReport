@@ -1,0 +1,15 @@
+{% extends 'base.html' %}
+{% block content %}
+<h1>Edit Columns - {{rt.name}}</h1>
+<form method="post">
+  <table class="table" id="editTable">
+    <thead><tr><th>Field Name</th></tr></thead>
+    <tbody>
+    {% for f in rt.fields %}
+      <tr><td><input class="form-control" name="fields" value="{{f}}" required></td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  <button class="btn btn-primary" type="submit">Save</button>
+</form>
+{% endblock %}
