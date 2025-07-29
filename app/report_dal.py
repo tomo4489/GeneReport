@@ -1,4 +1,4 @@
-
+from sqlalchemy import Table, Column, Integer, MetaData, String
 from sqlalchemy.exc import NoSuchTableError
 from .database import engine
 
