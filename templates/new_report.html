@@ -39,3 +39,24 @@ function addField(){
 addField();
 </script>
 {% endblock %}
+<!DOCTYPE html>
+<html>
+<head>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css">
+  <title>New Report Type</title>
+</head>
+<body class="container mt-4">
+  <h1>Create Report Type</h1>
+  <form method="post">
+    <div class="mb-3">
+      <label class="form-label">Name</label>
+      <input class="form-control" type="text" name="name" required>
+    </div>
+    <div class="mb-3">
+      <label class="form-label">Fields (comma separated)</label>
+      <input class="form-control" type="text" name="fields" required>
+    </div>
+    <button class="btn btn-success" type="submit">Create</button>
+  </form>
+</body>
+</html>

@@ -20,3 +20,4 @@ Set `OPENAI_API_KEY` environment variable to enable GPT parsing.
 
 - `GET /api/report-types` - list report names
 - `POST /api/report/{name}/record` - create record by report name
+
