@@ -2,7 +2,6 @@ from sqlalchemy.orm import Session
 from . import models
 from .report_dal import get_report_table, drop_report_table, rename_column, delete_records
 
-
 def create_report_type(db: Session, name: str, fields: list[str]):
     rt = models.ReportType(name=name, fields=fields)
     db.add(rt)
@@ -20,7 +19,6 @@ def get_report_types(db: Session):
 def get_report_type(db: Session, rt_id: int):
     return db.query(models.ReportType).filter(models.ReportType.id == rt_id).first()
 
-
 def get_report_type_by_name(db: Session, name: str):
     return db.query(models.ReportType).filter(models.ReportType.name == name).first()
 
@@ -36,7 +34,6 @@ def fetch_report_records(db: Session, report_type: models.ReportType):
     sel = table.select()
     res = db.execute(sel)
     return [dict(r) for r in res]
-
 
 def delete_report_type(db: Session, rt: models.ReportType):
     drop_report_table(rt.id)
