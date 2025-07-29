@@ -1,0 +1,21 @@
+{% extends 'base.html' %}
+{% block content %}
+<h1>Report Types</h1>
+<a class="btn btn-primary" href="/report-types/new">New Report Type</a>
+<table class="table mt-3">
+  <thead>
+    <tr><th>Name</th><th>Actions</th></tr>
+  </thead>
+  <tbody>
+    {% for rt in report_types %}
+    <tr>
+      <td><a href="/report-types/{{rt.id}}">{{rt.name}}</a></td>
+      <td>
+        <a class="btn btn-sm btn-danger" href="/report-types/{{rt.id}}/delete" onclick="return confirm('Delete?')">Delete</a>
+        <a class="btn btn-sm btn-secondary" href="/report-types/{{rt.id}}/edit">Edit Columns</a>
+      </td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endblock %}
