@@ -1,4 +1,5 @@
-from sqlalchemy import Table, Column, Integer, MetaData, String
+
+from sqlalchemy.exc import NoSuchTableError
 from .database import engine
 
 metadata = MetaData(bind=engine)
@@ -14,7 +15,6 @@ def get_report_table(report_type_id: int, fields: list[str]):
         table = Table(table_name, metadata, *cols)
         metadata.create_all(tables=[table])
     return table
-
 
 def drop_report_table(report_type_id: int):
     table_name = f"report_{report_type_id}"
@@ -34,3 +34,4 @@ def delete_records(report_type_id: int, ids: list[int]):
     table = Table(table_name, metadata, autoload_with=engine)
     stmt = table.delete().where(table.c.id.in_(ids))
     engine.execute(stmt)
+
