@@ -6,7 +6,7 @@ A prototype web system for generating and managing report data using GPT parsing
 
 Install dependencies:
 ```bash
-pip install fastapi uvicorn sqlalchemy jinja2 pandas openpyxl python-multipart openai
+pip install -r requirements.txt
 ```
 
 Run the application:
