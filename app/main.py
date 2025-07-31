@@ -41,14 +41,25 @@ async def new_report_form(request: Request):
 
 
 @app.post("/report-types/new")
-async def create_report(request: Request, name: str = Form(...), mode: str = Form(...), db: Session = Depends(get_db), file: UploadFile = File(None), fields: list[str] = Form(None)):
+async def create_report(
+    request: Request,
+    name: str = Form(...),
+    mode: str = Form(...),
+    db: Session = Depends(get_db),
+    file: UploadFile = File(None),
+    fields: list[str] = Form(None),
+    questions: list[str] = Form(None),
+):
     if mode == 'manual':
         if not fields:
             field_list = []
+            question_list = []
         elif isinstance(fields, list):
             field_list = [f for f in fields if f]
+            question_list = [q for q in questions][: len(field_list)] if questions else ["" for _ in field_list]
         else:
             field_list = [fields] if fields else []
+            question_list = [questions] if questions else [""]
     else:
         contents = await file.read()
         if file.filename.lower().endswith('.xlsx'):
@@ -59,7 +70,9 @@ async def create_report(request: Request, name: str = Form(...), mode: str = For
             field_list = [line.strip() for line in text.splitlines() if line.strip()][:10]
         else:
             field_list = []
-    crud.create_report_type(db, name, field_list)
+        question_list = [f + " を入力してください" for f in field_list]
+    crud.create_report_type(db, name, field_list, question_list)
+
     return RedirectResponse(url="/", status_code=302)
 
 

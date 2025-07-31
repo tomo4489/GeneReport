@@ -18,7 +18,6 @@ Set `OPENAI_API_KEY` environment variable or configure the key from the settings
 The settings page (gear icon) allows editing the Azure OpenAI endpoint/key, reviewing available APIs and managing users.
 Swagger UI is available at `/docs` for detailed API documentation.
 
-
 ### API Endpoints
 
 - `GET /api/report-types` - list report names

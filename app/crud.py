@@ -1,14 +1,28 @@
 from sqlalchemy.orm import Session
 from . import models
-from .report_dal import get_report_table, drop_report_table, rename_column, delete_records
+from .report_dal import (
+    get_report_table,
+    drop_report_table,
+    rename_column,
+    delete_records,
+    get_question_table,
+    drop_question_table,
+    rename_question_column,
+)
 
-def create_report_type(db: Session, name: str, fields: list[str]):
+
+def create_report_type(db: Session, name: str, fields: list[str], questions: list[str]):
+    """Create a new report type with associated tables."""
     rt = models.ReportType(name=name, fields=fields)
     db.add(rt)
     db.commit()
     db.refresh(rt)
-    # create table
     get_report_table(rt.id, fields)
+    q_table = get_question_table(rt.id, fields)
+    if questions:
+        data = {f: q for f, q in zip(fields, questions)}
+        db.execute(q_table.insert().values(**data))
+        db.commit()
     return rt
 
 
@@ -35,8 +49,18 @@ def fetch_report_records(db: Session, report_type: models.ReportType):
     res = db.execute(sel)
     return [dict(r) for r in res]
 
+def fetch_question_prompts(db: Session, report_type: models.ReportType):
+    table = get_question_table(report_type.id, report_type.fields)
+    sel = table.select()
+    res = db.execute(sel).fetchone()
+    if not res:
+        return {}
+    return {f: res[f] for f in report_type.fields}
+
+
 def delete_report_type(db: Session, rt: models.ReportType):
     drop_report_table(rt.id)
+    drop_question_table(rt.id)
     db.delete(rt)
     db.commit()
 
@@ -50,6 +74,8 @@ def update_report_type_fields(db: Session, rt: models.ReportType, new_fields: li
     for old, new in zip(rt.fields, new_fields):
         if old != new:
             rename_column(rt.id, old, new)
+            rename_question_column(rt.id, old, new)
+
     rt.fields = new_fields
     db.commit()
     db.refresh(rt)
