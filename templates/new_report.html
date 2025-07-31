@@ -1,0 +1,41 @@
+{% extends 'base.html' %}
+{% block content %}
+<h1>報告書種別の作成</h1>
+<form method="post" enctype="multipart/form-data" id="manualForm">
+  <div class="mb-3">
+    <label class="form-label">名称</label>
+    <input class="form-control" type="text" name="name" required>
+  </div>
+  <table class="table" id="fieldsTable">
+    <thead><tr><th>項目名</th><th>質問文</th><th></th></tr></thead>
+    <tbody></tbody>
+  </table>
+  <button type="button" class="btn btn-secondary" onclick="addField()">行を追加</button>
+  <input type="hidden" name="mode" value="manual">
+  <div class="mt-3">
+    <button class="btn btn-success" type="submit">作成</button>
+  </div>
+</form>
+<hr>
+<h2>ExcelまたはPDFから取り込み</h2>
+<form method="post" enctype="multipart/form-data">
+  <input type="hidden" name="mode" value="file">
+  <div class="mb-3">
+    <label class="form-label">名称</label>
+    <input class="form-control" type="text" name="name" required>
+  </div>
+  <div class="mb-3">
+    <input type="file" name="file" class="form-control" required>
+  </div>
+  <button class="btn btn-primary" type="submit">ファイルから作成</button>
+</form>
+<script>
+function addField(){
+  const tbody=document.querySelector('#fieldsTable tbody');
+  const tr=document.createElement('tr');
+  tr.innerHTML=`<td><input class="form-control" name="fields" required></td><td><input class="form-control" name="questions" required></td><td><button type="button" class="btn btn-sm btn-danger" onclick="this.parentElement.parentElement.remove()">X</button></td>`;
+  tbody.appendChild(tr);
+}
+addField();
+</script>
+{% endblock %}
