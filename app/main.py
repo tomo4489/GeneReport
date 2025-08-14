@@ -9,6 +9,7 @@ import pandas as pd
 from pdfminer.high_level import extract_text
 from pydantic import BaseModel
 
+
 from .database import Base, engine, SessionLocal
 from . import models, crud
 from .openai_util import parse_text_to_fields
@@ -73,6 +74,7 @@ async def create_report(
             field_list = []
         question_list = [f + " を入力してください" for f in field_list]
     crud.create_report_type(db, name, field_list, question_list)
+
     return RedirectResponse(url="/", status_code=302)
 
 
@@ -81,7 +83,6 @@ async def show_records(request: Request, rt_id: int, db: Session = Depends(get_d
     rt = crud.get_report_type(db, rt_id)
     records = crud.fetch_report_records(db, rt)
     return templates.TemplateResponse("records.html", {"request": request, "rt": rt, "records": records, "title":rt.name, "active":"list"})
-
 
 @app.post("/report-types/{rt_id}/upload")
 async def upload_excel(rt_id: int, file: UploadFile = File(...), db: Session = Depends(get_db)):
@@ -92,7 +93,6 @@ async def upload_excel(rt_id: int, file: UploadFile = File(...), db: Session = D
         data = {f: str(row.get(f, "")) for f in rt.fields}
         crud.insert_report_record(db, rt, data)
     return RedirectResponse(url=f"/report-types/{rt_id}", status_code=302)
-
 
 @app.post("/report-types/{rt_id}/records/{rec_id}/delete")
 async def delete_record(rt_id: int, rec_id: int, db: Session = Depends(get_db)):
@@ -130,7 +130,6 @@ async def update_columns(rt_id: int, fields: list[str] = Form(...), db: Session 
     crud.update_report_type_fields(db, rt, fields)
     return RedirectResponse(url=f"/report-types/{rt_id}", status_code=302)
 
-
 @app.get("/report-types/{rt_id}/records/{rec_id}/excel")
 async def download_record_excel(rt_id: int, rec_id: int, db: Session = Depends(get_db)):
     rt = crud.get_report_type(db, rt_id)
@@ -145,16 +144,13 @@ async def download_record_excel(rt_id: int, rec_id: int, db: Session = Depends(g
     headers = {"Content-Disposition": f"attachment; filename=record_{rec_id}.xlsx"}
     return StreamingResponse(output, media_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', headers=headers)
 
-
 @app.get("/settings/users", response_class=HTMLResponse)
 async def users(request: Request):
     return templates.TemplateResponse("users.html", {"request": request, "title":"ユーザー管理"})
 
-
 @app.get("/settings", response_class=HTMLResponse)
 async def settings(request: Request):
     return templates.TemplateResponse("settings.html", {"request": request, "title":"Settings"})
-
 
 @app.get("/settings/apis", response_class=HTMLResponse)
 async def api_list(request: Request):
@@ -211,7 +207,6 @@ async def api_report_fields(req: ReportRequest, db: Session = Depends(get_db)):
         return {"error": "report type not found"}
     return {"fields": rt.fields}
 
-
 @app.post("/api/report/questions")
 async def api_report_questions(req: ReportRequest, db: Session = Depends(get_db)):
     """Return the question prompts for the specified report"""
@@ -221,12 +216,10 @@ async def api_report_questions(req: ReportRequest, db: Session = Depends(get_db)
     questions = crud.fetch_question_prompts(db, rt)
     return {"questions": questions}
 
-
 @app.get("/api/report-types")
 async def api_report_types(db: Session = Depends(get_db)):
     rts = crud.get_report_types(db)
     return {"reports": [rt.name for rt in rts]}
-
 
 @app.post("/api/report/record")
 async def api_create_record(req: RecordRequest, db: Session = Depends(get_db)):
