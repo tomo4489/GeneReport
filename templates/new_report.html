@@ -34,7 +34,6 @@ function addField(){
   const tbody=document.querySelector('#fieldsTable tbody');
   const tr=document.createElement('tr');
   tr.innerHTML=`<td><input class="form-control" name="fields" required></td><td><input class="form-control" name="questions" required></td><td><button type="button" class="btn btn-sm btn-danger" onclick="this.parentElement.parentElement.remove()">X</button></td>`;
-
   tbody.appendChild(tr);
 }
 addField();

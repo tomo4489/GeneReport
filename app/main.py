@@ -7,6 +7,8 @@ import io
 import csv
 import pandas as pd
 from pdfminer.high_level import extract_text
+from pydantic import BaseModel
+
 
 from .database import Base, engine, SessionLocal
 from . import models, crud
@@ -168,35 +170,61 @@ async def save_openai(request: Request, endpoint: str = Form(None), key: str = F
     save_openai_config({"endpoint": endpoint, "key": key})
     return RedirectResponse(url="/settings", status_code=302)
 
+# Request models for API endpoints
+
+
+class ReportRequest(BaseModel):
+    report_name: str
+
+
+class ParseRequest(ReportRequest):
+    text: str
+
+
+class RecordRequest(ReportRequest):
+    payload: dict
+
+
 # API endpoint
-@app.post("/api/report/{name}/parse")
-async def api_parse(name: str, text: str = Form(...), db: Session = Depends(get_db)):
+
+
+@app.post("/api/report/parse")
+async def api_parse(req: ParseRequest, db: Session = Depends(get_db)):
     """Parse free text with GPT and store as a new record"""
-    rt = crud.get_report_type_by_name(db, name)
+    rt = crud.get_report_type_by_name(db, req.report_name)
     if not rt:
         return {"error": "report type not found"}
-    data = parse_text_to_fields(text, rt.fields)
+    data = parse_text_to_fields(req.text, rt.fields)
     crud.insert_report_record(db, rt, data)
     return {"status": "ok", "data": data}
 
-@app.get("/api/report/{name}/fields")
-async def api_report_fields(name: str, db: Session = Depends(get_db)):
+
+@app.post("/api/report/fields")
+async def api_report_fields(req: ReportRequest, db: Session = Depends(get_db)):
     """Return the field list for the specified report"""
-    rt = crud.get_report_type_by_name(db, name)
+    rt = crud.get_report_type_by_name(db, req.report_name)
     if not rt:
         return {"error": "report type not found"}
     return {"fields": rt.fields}
+
+@app.post("/api/report/questions")
+async def api_report_questions(req: ReportRequest, db: Session = Depends(get_db)):
+    """Return the question prompts for the specified report"""
+    rt = crud.get_report_type_by_name(db, req.report_name)
+    if not rt:
+        return {"error": "report type not found"}
+    questions = crud.fetch_question_prompts(db, rt)
+    return {"questions": questions}
 
 @app.get("/api/report-types")
 async def api_report_types(db: Session = Depends(get_db)):
     rts = crud.get_report_types(db)
     return {"reports": [rt.name for rt in rts]}
 
-
-@app.post("/api/report/{name}/record")
-async def api_create_record(name: str, payload: dict, db: Session = Depends(get_db)):
-    rt = crud.get_report_type_by_name(db, name)
+@app.post("/api/report/record")
+async def api_create_record(req: RecordRequest, db: Session = Depends(get_db)):
+    rt = crud.get_report_type_by_name(db, req.report_name)
     if not rt:
         return {"error": "report type not found"}
-    crud.insert_report_record(db, rt, payload)
+    crud.insert_report_record(db, rt, req.payload)
     return {"status": "ok"}

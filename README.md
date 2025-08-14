@@ -21,7 +21,7 @@ Swagger UI is available at `/docs` for detailed API documentation.
 ### API Endpoints
 
 - `GET /api/report-types` - list report names
-- `GET /api/report/{name}/fields` - list field names of the specified report
-- `POST /api/report/{name}/record` - create record by report name
-- `POST /api/report/{name}/parse` - parse free text using GPT and store a record
-
+- `POST /api/report/fields` - list field names of a report (body: `{ "report_name": "name" }`)
+- `POST /api/report/questions` - list question prompts of a report (body: `{ "report_name": "name" }`)
+- `POST /api/report/record` - create record by report name (body: `{ "report_name": "name", "payload": { ... } }`)
+- `POST /api/report/parse` - parse free text using GPT and store a record (body: `{ "report_name": "name", "text": "..." }`)
