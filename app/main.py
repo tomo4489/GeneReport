@@ -298,15 +298,14 @@ async def api_create_record(request: Request, db: Session = Depends(get_db)):
     logs.append(f"rt.fields: {rt.fields}")
     logs.append(f"form keys: {list(form.keys())}")
 
-    # form.items() を使うことで UploadFile を判定できる
     for f in rt.fields:
         t = type_map.get(f, "text")
-        value = form.get(f)
+        value = form[f] if f in form else None
         logs.append(f"checking: {f}, {t}, type={type(value)}")
 
         if t in ("image", "video"):
-            # ここで UploadFile 判定
-            if isinstance(value, UploadFile) and value.filename:
+            if isinstance(value, UploadFile):
+                logs.append(f"UploadFile detected: {value.filename}")
                 contents = await value.read()
                 logs.append(f"read size: {len(contents)}")
                 if len(contents) > 100 * 1024 * 1024:
@@ -318,16 +317,12 @@ async def api_create_record(request: Request, db: Session = Depends(get_db)):
                     out.write(contents)
                 data[f] = f"uploads/{filename}"
             else:
-                logs.append("no UploadFile received")
+                logs.append("not an UploadFile")
         else:
-            # テキスト型の場合
             if value is not None and not isinstance(value, UploadFile):
                 data[f] = value
                 logs.append(f"text value: {value}")
-            else:
-                logs.append("unexpected UploadFile for text field")
 
-    # 自由入力フィールド用 free_text
     free_text = form.get("free_text")
     free_fields = [name for name, t in type_map.items() if t == "free"]
     if free_text and free_fields:
