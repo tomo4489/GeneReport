@@ -1,4 +1,5 @@
 from fastapi import FastAPI, Depends, Form, Request, File, UploadFile
+from starlette.datastructures import UploadFile as StarletteUploadFile
 from fastapi.responses import HTMLResponse, RedirectResponse, StreamingResponse
 from fastapi.templating import Jinja2Templates
 from fastapi.staticfiles import StaticFiles
@@ -273,12 +274,20 @@ async def api_report_types(db: Session = Depends(get_db)):
 
 @app.post("/api/report/record")
 async def api_create_record(request: Request, db: Session = Depends(get_db)):
+    """
+    新しいレポートレコードを作成するAPI。
+    - テキストは form フィールドから取得
+    - 画像・動画は UploadFile として受け取り static/uploads に保存
+    """
     form = await request.form()
     logs: list[str] = []
+
+    # --- 基本情報の取得 ---
     report_name = form.get("report_name")
     logs.append(f"report_name: {report_name}")
     if not report_name:
         return {"error": "report_name required", "logs": logs}
+
     rt = crud.get_report_type_by_name(db, report_name)
     if not rt:
         logs.append("report type not found")
@@ -287,17 +296,22 @@ async def api_create_record(request: Request, db: Session = Depends(get_db)):
     data: dict[str, str] = {}
     free_text = form.get("free_text")
     os.makedirs("static/uploads", exist_ok=True)
+
+    # --- 各フィールド処理 ---
     field_types = rt.field_types or []
     type_map = {f: field_types[i] if i < len(field_types) else "text" for i, f in enumerate(rt.fields)}
     logs.append(f"rt.fields: {rt.fields}")
     logs.append(f"form keys: {list(form.keys())}")
+
     for f in rt.fields:
         t = type_map.get(f, "text")
         logs.append(f"checking: {f}, {t}")
         value = form[f] if f in form else None
         logs.append(f"received: {value}, {type(value)}")
+
+        # 画像・動画フィールド
         if t in ("image", "video"):
-            if isinstance(value, UploadFile) and value.filename:
+            if isinstance(value, (UploadFile, StarletteUploadFile)) and value.filename:
                 contents = await value.read()
                 logs.append(f"read size: {len(contents)}")
                 if len(contents) > 100 * 1024 * 1024:
@@ -305,25 +319,32 @@ async def api_create_record(request: Request, db: Session = Depends(get_db)):
                     return {"error": "file too large", "logs": logs}
                 ext = os.path.splitext(value.filename)[1]
                 filename = f"{uuid.uuid4().hex}{ext}"
-                with open(os.path.join("static/uploads", filename), "wb") as out:
+                filepath = os.path.join("static/uploads", filename)
+                with open(filepath, "wb") as out:
                     out.write(contents)
                 data[f] = f"uploads/{filename}"
+                logs.append(f"saved file to {filepath}")
             else:
                 logs.append("not a valid UploadFile")
+
+        # テキストフィールド
         else:
-            if not isinstance(value, UploadFile):
+            if not isinstance(value, (UploadFile, StarletteUploadFile)):
                 logs.append(f"text value: {value}")
                 if value is not None:
                     data[f] = value
             else:
                 logs.append("unexpected UploadFile for text field")
 
+    # --- 自由入力テキストのパース ---
     free_fields = [name for name, t in type_map.items() if t == "free"]
     if free_text and free_fields:
         logs.append(f"parsing free_text into: {free_fields}")
         parsed = parse_text_to_fields(free_text, free_fields)
         data.update(parsed)
 
+    # --- DB に保存 ---
     crud.insert_report_record(db, rt, data)
     logs.append("inserted record")
+
     return {"status": "ok", "logs": logs}
