@@ -271,10 +271,6 @@ async def api_report_types(db: Session = Depends(get_db)):
     rts = crud.get_report_types(db)
     return {"reports": [rt.name for rt in rts]}
 
-from typing import List, Optional
-from fastapi import FastAPI, Depends, Form, Request, File, UploadFile
-# ...省略...
-
 @app.post("/api/report/record")
 async def api_create_record(request: Request, db: Session = Depends(get_db)):
     form = await request.form()
@@ -333,8 +329,6 @@ async def api_create_record(request: Request, db: Session = Depends(get_db)):
         data.update(parsed)
 
     crud.insert_report_record(db, rt, data)
-    logs.append("inserted record")
-    return {"status": "ok", "logs": logs}
     logs.append("inserted record")
     return {"status": "ok", "logs": logs}
 
