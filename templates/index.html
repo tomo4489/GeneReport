@@ -1,0 +1,21 @@
+{% extends 'base.html' %}
+{% block content %}
+<h1>報告書一覧</h1>
+<a class="btn btn-primary" href="/report-types/new">新規報告書追加</a>
+<table class="table mt-3">
+  <thead>
+    <tr><th>名称</th><th>操作</th></tr>
+  </thead>
+  <tbody>
+    {% for rt in report_types %}
+    <tr>
+      <td><a href="/report-types/{{rt.id}}">{{rt.name}}</a></td>
+      <td>
+        <a class="btn btn-sm btn-danger" href="/report-types/{{rt.id}}/delete" onclick="return confirm('削除しますか?')">削除</a>
+        <a class="btn btn-sm btn-secondary" href="/report-types/{{rt.id}}/edit">カラム編集</a>
+      </td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endblock %}
