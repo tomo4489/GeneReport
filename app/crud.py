@@ -10,10 +10,9 @@ from .report_dal import (
     rename_question_column,
 )
 
-
-def create_report_type(db: Session, name: str, fields: list[str], questions: list[str]):
+def create_report_type(db: Session, name: str, fields: list[str], questions: list[str], types: list[str]):
     """Create a new report type with associated tables."""
-    rt = models.ReportType(name=name, fields=fields)
+    rt = models.ReportType(name=name, fields=fields, field_types=types)
     db.add(rt)
     db.commit()
     db.refresh(rt)
@@ -57,6 +56,15 @@ def fetch_question_prompts(db: Session, report_type: models.ReportType):
         return {}
     return {f: res[f] for f in report_type.fields}
 
+def update_question_prompts(db: Session, report_type: models.ReportType, questions: list[str]):
+    table = get_question_table(report_type.id, report_type.fields)
+    existing = db.execute(table.select()).fetchone()
+    data = {f: q for f, q in zip(report_type.fields, questions)}
+    if existing:
+        db.execute(table.update().where(table.c.id == existing["id"]).values(**data))
+    else:
+        db.execute(table.insert().values(**data))
+    db.commit()
 
 def delete_report_type(db: Session, rt: models.ReportType):
     drop_report_table(rt.id)
@@ -75,7 +83,9 @@ def update_report_type_fields(db: Session, rt: models.ReportType, new_fields: li
         if old != new:
             rename_column(rt.id, old, new)
             rename_question_column(rt.id, old, new)
-
     rt.fields = new_fields
+    if rt.field_types:
+        rt.field_types = rt.field_types[: len(new_fields)]
+
     db.commit()
     db.refresh(rt)

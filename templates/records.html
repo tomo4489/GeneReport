@@ -1,7 +1,24 @@
 {% extends 'base.html' %}
 {% block content %}
 <h1>{{rt.name}} のレコード一覧</h1>
-<form class="mb-3" action="/report-types/{{rt.id}}/upload" method="post" enctype="multipart/form-data">
+<h2 class="mt-4">質問一覧</h2>
+<form method="post" action="/report-types/{{rt.id}}/questions">
+<table class="table table-bordered">
+  <thead><tr><th>項目名</th><th>質問文</th><th>タイプ</th></tr></thead>
+  <tbody>
+  {% for f in fields_info %}
+    <tr>
+      <td>{{f.name}}</td>
+      <td><input class="form-control" name="questions" value="{{f.question}}"></td>
+      <td>{{f.type}}</td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+<button class="btn btn-primary" type="submit">質問を更新</button>
+</form>
+
+<form class="mb-3 mt-4" action="/report-types/{{rt.id}}/upload" method="post" enctype="multipart/form-data">
   <input type="file" name="file" class="form-control" required>
   <button class="btn btn-primary mt-2" type="submit">Excelアップロード</button>
 </form>

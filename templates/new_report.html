@@ -7,7 +7,7 @@
     <input class="form-control" type="text" name="name" required>
   </div>
   <table class="table" id="fieldsTable">
-    <thead><tr><th>項目名</th><th>質問文</th><th></th></tr></thead>
+    <thead><tr><th>項目名</th><th>質問文</th><th>タイプ</th><th></th></tr></thead>
     <tbody></tbody>
   </table>
   <button type="button" class="btn btn-secondary" onclick="addField()">行を追加</button>
@@ -33,7 +33,7 @@
 function addField(){
   const tbody=document.querySelector('#fieldsTable tbody');
   const tr=document.createElement('tr');
-  tr.innerHTML=`<td><input class="form-control" name="fields" required></td><td><input class="form-control" name="questions" required></td><td><button type="button" class="btn btn-sm btn-danger" onclick="this.parentElement.parentElement.remove()">X</button></td>`;
+  tr.innerHTML=`<td><input class="form-control" name="fields" required></td><td><input class="form-control" name="questions" required></td><td><select class="form-select" name="types"><option value="qa">テキスト（一問一答）</option><option value="free">テキスト（自由入力）</option><option value="image">画像</option><option value="video">動画</option></select></td><td><button type="button" class="btn btn-sm btn-danger" onclick="this.parentElement.parentElement.remove()">X</button></td>`;
   tbody.appendChild(tr);
 }
 addField();

@@ -8,11 +8,9 @@ import csv
 import pandas as pd
 from pdfminer.high_level import extract_text
 from pydantic import BaseModel
-
-
 from .database import Base, engine, SessionLocal
 from . import models, crud
-from .openai_util import parse_text_to_fields
+from .openai_util import parse_text_to_fields, chat_reply
 from .report_dal import get_report_table
 
 Base.metadata.create_all(bind=engine)
@@ -51,17 +49,21 @@ async def create_report(
     file: UploadFile = File(None),
     fields: list[str] = Form(None),
     questions: list[str] = Form(None),
+    types: list[str] = Form(None),
 ):
     if mode == 'manual':
         if not fields:
             field_list = []
             question_list = []
+            type_list = []
         elif isinstance(fields, list):
             field_list = [f for f in fields if f]
             question_list = [q for q in questions][: len(field_list)] if questions else ["" for _ in field_list]
+            type_list = [t for t in types][: len(field_list)] if types else ["qa" for _ in field_list]
         else:
             field_list = [fields] if fields else []
             question_list = [questions] if questions else [""]
+            type_list = [types] if types else ["qa"]
     else:
         contents = await file.read()
         if file.filename.lower().endswith('.xlsx'):
@@ -73,8 +75,8 @@ async def create_report(
         else:
             field_list = []
         question_list = [f + " を入力してください" for f in field_list]
-    crud.create_report_type(db, name, field_list, question_list)
-
+        type_list = ["qa" for _ in field_list]
+    crud.create_report_type(db, name, field_list, question_list, type_list)
     return RedirectResponse(url="/", status_code=302)
 
 
@@ -82,7 +84,16 @@ async def create_report(
 async def show_records(request: Request, rt_id: int, db: Session = Depends(get_db)):
     rt = crud.get_report_type(db, rt_id)
     records = crud.fetch_report_records(db, rt)
-    return templates.TemplateResponse("records.html", {"request": request, "rt": rt, "records": records, "title":rt.name, "active":"list"})
+    questions = crud.fetch_question_prompts(db, rt)
+    field_info = [
+        {
+            "name": f,
+            "question": questions.get(f, ""),
+            "type": rt.field_types[i] if rt.field_types else "qa",
+        }
+        for i, f in enumerate(rt.fields)
+    ]
+    return templates.TemplateResponse("records.html", {"request": request, "rt": rt, "records": records, "fields_info": field_info, "title":rt.name, "active":"list"})
 
 @app.post("/report-types/{rt_id}/upload")
 async def upload_excel(rt_id: int, file: UploadFile = File(...), db: Session = Depends(get_db)):
@@ -110,6 +121,11 @@ async def delete_records(rt_id: int, record_ids: list[int] = Form(...), db: Sess
     crud.delete_report_records(db, crud.get_report_type(db, rt_id), record_ids)
     return RedirectResponse(url=f"/report-types/{rt_id}", status_code=302)
 
+@app.post("/report-types/{rt_id}/questions")
+async def update_questions(rt_id: int, questions: list[str] = Form(...), db: Session = Depends(get_db)):
+    rt = crud.get_report_type(db, rt_id)
+    crud.update_question_prompts(db, rt, questions)
+    return RedirectResponse(url=f"/report-types/{rt_id}", status_code=302)
 
 @app.get("/report-types/{rt_id}/delete")
 async def delete_report_type(rt_id: int, db: Session = Depends(get_db)):
@@ -144,13 +160,28 @@ async def download_record_excel(rt_id: int, rec_id: int, db: Session = Depends(g
     headers = {"Content-Disposition": f"attachment; filename=record_{rec_id}.xlsx"}
     return StreamingResponse(output, media_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', headers=headers)
 
-@app.get("/settings/users", response_class=HTMLResponse)
+@app.get("/users", response_class=HTMLResponse)
 async def users(request: Request):
-    return templates.TemplateResponse("users.html", {"request": request, "title":"ユーザー管理"})
+    return templates.TemplateResponse("users.html", {"request": request, "title":"ユーザー管理", "active":"users"})
+
+
+@app.get("/settings/users", response_class=HTMLResponse)
+async def settings_users_redirect():
+    return RedirectResponse(url="/users")
 
 @app.get("/settings", response_class=HTMLResponse)
 async def settings(request: Request):
     return templates.TemplateResponse("settings.html", {"request": request, "title":"Settings"})
+
+@app.get("/chat", response_class=HTMLResponse)
+async def chat_page(request: Request):
+    return templates.TemplateResponse("chat.html", {"request": request, "title":"AIチャット", "active":"chat"})
+
+
+@app.post("/chat", response_class=HTMLResponse)
+async def chat_submit(request: Request, message: str = Form(...)):
+    reply = chat_reply(message)
+    return templates.TemplateResponse("chat.html", {"request": request, "title":"AIチャット", "active":"chat", "message": message, "reply": reply})
 
 @app.get("/settings/apis", response_class=HTMLResponse)
 async def api_list(request: Request):
@@ -182,7 +213,8 @@ class ParseRequest(ReportRequest):
 
 
 class RecordRequest(ReportRequest):
-    payload: dict
+    payload: dict = {}
+    free_text: str | None = None
 
 
 # API endpoint
@@ -214,7 +246,15 @@ async def api_report_questions(req: ReportRequest, db: Session = Depends(get_db)
     if not rt:
         return {"error": "report type not found"}
     questions = crud.fetch_question_prompts(db, rt)
-    return {"questions": questions}
+    data = [
+        {
+            "field": f,
+            "question": questions.get(f, ""),
+            "type": rt.field_types[i] if rt.field_types else "qa",
+        }
+        for i, f in enumerate(rt.fields)
+    ]
+    return {"questions": data}
 
 @app.get("/api/report-types")
 async def api_report_types(db: Session = Depends(get_db)):
@@ -226,5 +266,10 @@ async def api_create_record(req: RecordRequest, db: Session = Depends(get_db)):
     rt = crud.get_report_type_by_name(db, req.report_name)
     if not rt:
         return {"error": "report type not found"}
-    crud.insert_report_record(db, rt, req.payload)
+    data = req.payload or {}
+    free_fields = [f for f, t in zip(rt.fields, rt.field_types or []) if t == "free"]
+    if req.free_text and free_fields:
+        parsed = parse_text_to_fields(req.free_text, free_fields)
+        data.update(parsed)
+    crud.insert_report_record(db, rt, data)
     return {"status": "ok"}

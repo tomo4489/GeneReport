@@ -5,4 +5,5 @@ class ReportType(Base):
     __tablename__ = 'report_types'
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String, unique=True, index=True)
-    fields = Column(JSON)  # list of field names
+    fields = Column(JSON)  # list of field names in order
+    field_types = Column(JSON)  # list of input types aligned with fields
