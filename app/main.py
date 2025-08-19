@@ -10,7 +10,6 @@ import uuid
 import pandas as pd
 from pdfminer.high_level import extract_text
 from pydantic import BaseModel
-
 from .database import Base, engine, SessionLocal
 from . import models, crud
 from .openai_util import parse_text_to_fields, chat_reply
@@ -100,7 +99,6 @@ async def show_records(request: Request, rt_id: int, db: Session = Depends(get_d
         field_info.append({"name": f, "question": questions.get(f, ""), "type": t, "type_label": type_map.get(t, t)})
     return templates.TemplateResponse("records.html", {"request": request, "rt": rt, "records": records, "fields_info": field_info, "title":rt.name, "active":"list"})
 
-
 @app.post("/report-types/{rt_id}/upload")
 async def upload_excel(rt_id: int, file: UploadFile = File(...), db: Session = Depends(get_db)):
     rt = crud.get_report_type(db, rt_id)
@@ -110,7 +108,6 @@ async def upload_excel(rt_id: int, file: UploadFile = File(...), db: Session = D
         data = {f: str(row.get(f, "")) for f in rt.fields}
         crud.insert_report_record(db, rt, data)
     return RedirectResponse(url=f"/report-types/{rt_id}", status_code=302)
-
 
 @app.post("/report-types/{rt_id}/records/{rec_id}/delete")
 async def delete_record(rt_id: int, rec_id: int, db: Session = Depends(get_db)):
@@ -128,7 +125,6 @@ async def delete_records(rt_id: int, record_ids: list[int] = Form(...), db: Sess
     crud.delete_report_records(db, crud.get_report_type(db, rt_id), record_ids)
     return RedirectResponse(url=f"/report-types/{rt_id}", status_code=302)
 
-
 @app.post("/report-types/{rt_id}/records/{rec_id}/update")
 async def update_record(rt_id: int, rec_id: int, request: Request, db: Session = Depends(get_db)):
     rt = crud.get_report_type(db, rt_id)
@@ -141,13 +137,11 @@ async def update_record(rt_id: int, rec_id: int, request: Request, db: Session =
         crud.update_report_record(db, rt, rec_id, data)
     return RedirectResponse(url=f"/report-types/{rt_id}", status_code=302)
 
-
 @app.post("/report-types/{rt_id}/questions")
 async def update_questions(rt_id: int, questions: list[str] = Form(...), db: Session = Depends(get_db)):
     rt = crud.get_report_type(db, rt_id)
     crud.update_question_prompts(db, rt, questions)
     return RedirectResponse(url=f"/report-types/{rt_id}", status_code=302)
-
 
 @app.get("/report-types/{rt_id}/delete")
 async def delete_report_type(rt_id: int, db: Session = Depends(get_db)):
@@ -168,7 +162,6 @@ async def update_columns(rt_id: int, fields: list[str] = Form(...), db: Session 
     crud.update_report_type_fields(db, rt, fields)
     return RedirectResponse(url=f"/report-types/{rt_id}", status_code=302)
 
-
 @app.get("/report-types/{rt_id}/records/{rec_id}/excel")
 async def download_record_excel(rt_id: int, rec_id: int, db: Session = Depends(get_db)):
     rt = crud.get_report_type(db, rt_id)
@@ -183,7 +176,6 @@ async def download_record_excel(rt_id: int, rec_id: int, db: Session = Depends(g
     headers = {"Content-Disposition": f"attachment; filename=record_{rec_id}.xlsx"}
     return StreamingResponse(output, media_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', headers=headers)
 
-
 @app.get("/users", response_class=HTMLResponse)
 async def users(request: Request):
     return templates.TemplateResponse("users.html", {"request": request, "title":"ユーザー管理", "active":"users"})
@@ -193,11 +185,9 @@ async def users(request: Request):
 async def settings_users_redirect():
     return RedirectResponse(url="/users")
 
-
 @app.get("/settings", response_class=HTMLResponse)
 async def settings(request: Request):
     return templates.TemplateResponse("settings.html", {"request": request, "title":"Settings"})
-
 
 @app.get("/chat", response_class=HTMLResponse)
 async def chat_page(request: Request):
@@ -208,7 +198,6 @@ async def chat_page(request: Request):
 async def chat_submit(request: Request, message: str = Form(...)):
     reply = chat_reply(message)
     return templates.TemplateResponse("chat.html", {"request": request, "title":"AIチャット", "active":"chat", "message": message, "reply": reply})
-
 
 @app.get("/settings/apis", response_class=HTMLResponse)
 async def api_list(request: Request):
@@ -260,7 +249,6 @@ async def api_report_fields(req: ReportRequest, db: Session = Depends(get_db)):
         return {"error": "report type not found"}
     return {"fields": rt.fields}
 
-
 @app.post("/api/report/questions")
 async def api_report_questions(req: ReportRequest, db: Session = Depends(get_db)):
     """Return the question prompts for the specified report"""
@@ -278,12 +266,10 @@ async def api_report_questions(req: ReportRequest, db: Session = Depends(get_db)
     ]
     return {"questions": data}
 
-
 @app.get("/api/report-types")
 async def api_report_types(db: Session = Depends(get_db)):
     rts = crud.get_report_types(db)
     return {"reports": [rt.name for rt in rts]}
-
 
 @app.post("/api/report/record")
 async def api_create_record(request: Request, db: Session = Depends(get_db)):
