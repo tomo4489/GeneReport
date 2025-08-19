@@ -4,7 +4,6 @@ from .config import load_openai_config
 
 MODEL = "gpt-4-1106-preview"
 
-
 def _setup_openai():
     cfg = load_openai_config()
     openai.api_key = cfg.get("key") or os.getenv("OPENAI_API_KEY")
@@ -13,7 +12,6 @@ def _setup_openai():
         openai.api_base = endpoint
     if not openai.api_key:
         raise RuntimeError("OpenAI API key not set")
-
 
 def parse_text_to_fields(text: str, fields: list[str]) -> dict:
     """Call OpenAI to parse text into fields"""
@@ -31,7 +29,6 @@ def parse_text_to_fields(text: str, fields: list[str]) -> dict:
         return json.loads(content)
     except Exception:
         return {}
-
 
 def chat_reply(message: str) -> str:
     _setup_openai()
