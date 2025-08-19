@@ -285,8 +285,8 @@ async def api_create_record(request: Request, db: Session = Depends(get_db)):
     os.makedirs("static/uploads", exist_ok=True)
     for f, t in zip(rt.fields, rt.field_types or []):
         if t in ("image", "video"):
-            file = form.get(f)
-            if isinstance(file, UploadFile):
+            file = form[f] if f in form else None
+            if isinstance(file, UploadFile) and file.filename:
                 contents = await file.read()
                 if len(contents) > 100 * 1024 * 1024:
                     return {"error": "file too large"}

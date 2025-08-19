@@ -33,21 +33,21 @@
     </tr>
   </thead>
   <tbody>
-  {% for r in records %}
-    <tr>
-      <td><input type="checkbox" name="record_ids" value="{{r.id}}"></td>
-      <td>{{r.id}}</td>
-      {% for f in fields_info %}
-        <td>
-        {% if f.type == 'image' %}
-          {% if r[f.name] %}<img src="/static/{{r[f.name]}}" width="100">{% endif %}
-        {% elif f.type == 'video' %}
-          {% if r[f.name] %}<video src="/static/{{r[f.name]}}" width="120" controls></video>{% endif %}
-        {% else %}
-          <input class="form-control" name="{{f.name}}" value="{{r[f.name]}}" form="form{{r.id}}">
-        {% endif %}
-        </td>
-      {% endfor %}
+      {% for r in records %}
+        <tr>
+          <td><input type="checkbox" name="record_ids" value="{{r.id}}"></td>
+          <td>{{r.id}}</td>
+          {% for f in fields_info %}
+            <td>
+            {% if f.type == 'image' %}
+              {% if r[f.name] %}<img src="/static/{{r[f.name]}}" width="100" style="cursor:pointer" onclick="showPreview('image','{{r[f.name]}}')">{% endif %}
+            {% elif f.type == 'video' %}
+              {% if r[f.name] %}<video src="/static/{{r[f.name]}}" width="120" style="cursor:pointer" onclick="showPreview('video','{{r[f.name]}}')"></video>{% endif %}
+            {% else %}
+              <input class="form-control" name="{{f.name}}" value="{{r[f.name]}}" form="form{{r.id}}">
+            {% endif %}
+            </td>
+          {% endfor %}
       <td>
         <a href="/report-types/{{rt.id}}/records/{{r.id}}/excel">Excel</a>
         <a href="/report-types/{{rt.id}}/records/{{r.id}}/delete" class="text-danger ms-2" onclick="return confirm('削除しますか?')">削除</a>
@@ -66,5 +66,27 @@
 function toggleAll(source){
   document.querySelectorAll('input[name="record_ids"]').forEach(cb=>cb.checked=source.checked);
 }
+function showPreview(type, src){
+  const body = document.getElementById('previewBody');
+  if(type === 'image'){
+    body.innerHTML = `<img src="/static/${src}" class="img-fluid">`;
+  }else if(type === 'video'){
+    body.innerHTML = `<video src="/static/${src}" class="w-100" controls autoplay></video>`;
+  }
+  const modal = new bootstrap.Modal(document.getElementById('previewModal'));
+  modal.show();
+}
 </script>
+
+<div class="modal fade" id="previewModal" tabindex="-1">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">プレビュー</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body text-center" id="previewBody"></div>
+    </div>
+  </div>
+</div>
 {% endblock %}
