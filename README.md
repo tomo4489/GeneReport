@@ -23,8 +23,9 @@ Swagger UI is available at `/docs` for detailed API documentation.
 - `GET /api/report-types` - list report names
 - `POST /api/report/fields` - list field names of a report (body: `{ "report_name": "name" }`)
 - `POST /api/report/questions` - list question prompts and input types (body: `{ "report_name": "name" }`)
-- `POST /api/report/record` - create record by report name (body: `{ "report_name": "name", "payload": { ... }, "free_text": "..." }`)
-  - image/video fields should contain Base64 encoded strings
+- `POST /api/report/record` - create record by report name using `multipart/form-data`
+  - send `report_name`, optional text fields, `free_text`, and attach image/video files (up to 100MB each)
+
 - `POST /api/report/parse` - parse free text using GPT and store a record (body: `{ "report_name": "name", "text": "..." }`)
 
 The web UI also provides an **AIチャット** tab to talk directly with GPT using the configured OpenAI settings.

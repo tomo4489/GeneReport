@@ -41,6 +41,11 @@ def insert_report_record(db: Session, report_type: models.ReportType, data: dict
     db.execute(insert_stmt)
     db.commit()
 
+def update_report_record(db: Session, report_type: models.ReportType, rec_id: int, data: dict):
+    table = get_report_table(report_type.id, report_type.fields)
+    stmt = table.update().where(table.c.id == rec_id).values(**data)
+    db.execute(stmt)
+    db.commit()
 
 def fetch_report_records(db: Session, report_type: models.ReportType):
     table = get_report_table(report_type.id, report_type.fields)
@@ -86,6 +91,5 @@ def update_report_type_fields(db: Session, rt: models.ReportType, new_fields: li
     rt.fields = new_fields
     if rt.field_types:
         rt.field_types = rt.field_types[: len(new_fields)]
-
     db.commit()
     db.refresh(rt)

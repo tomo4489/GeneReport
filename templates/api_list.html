@@ -9,8 +9,8 @@
     <pre>{"report_name": "報告書名"}
 レスポンス例: {"questions": [{"field":"項目名","question":"質問文","type":"qa"},...]}</pre></li>
   <li><strong>POST /api/report/record</strong> - 指定した報告書へレコードを追加
-    <pre>{"report_name": "報告書名", "payload": {"field1": "value", ...}, "free_text": "全文"}</pre>
-    画像・動画はBase64文字列で送信してください</li>
+    <p>multipart/form-data で送信し、フィールド名をキーにテキストを送信、画像・動画ファイルを添付します（各100MBまで）。<br>
+    `report_name` と任意の `free_text` もフォーム値として指定します。</p></li>
   <li><strong>POST /api/report/parse</strong> - テキストを解析してレコードを保存
     <pre>{"report_name": "報告書名", "text": "..."}</pre></li>
 </ul>

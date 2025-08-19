@@ -10,7 +10,7 @@
     <tr>
       <td>{{f.name}}</td>
       <td><input class="form-control" name="questions" value="{{f.question}}"></td>
-      <td>{{f.type}}</td>
+      <td>{{f.type_label}}</td>
     </tr>
   {% endfor %}
   </tbody>
@@ -28,7 +28,7 @@
     <tr>
       <th><input type="checkbox" onclick="toggleAll(this)"></th>
       <th>ID</th>
-      {% for f in rt.fields %}<th>{{f}}</th>{% endfor %}
+      {% for f in fields_info %}<th>{{f.name}}</th>{% endfor %}
       <th>操作</th>
     </tr>
   </thead>
@@ -37,10 +37,21 @@
     <tr>
       <td><input type="checkbox" name="record_ids" value="{{r.id}}"></td>
       <td>{{r.id}}</td>
-      {% for f in rt.fields %}<td>{{r[f]}}</td>{% endfor %}
+      {% for f in fields_info %}
+        <td>
+        {% if f.type == 'image' %}
+          {% if r[f.name] %}<img src="/static/{{r[f.name]}}" width="100">{% endif %}
+        {% elif f.type == 'video' %}
+          {% if r[f.name] %}<video src="/static/{{r[f.name]}}" width="120" controls></video>{% endif %}
+        {% else %}
+          <input class="form-control" name="{{f.name}}" value="{{r[f.name]}}" form="form{{r.id}}">
+        {% endif %}
+        </td>
+      {% endfor %}
       <td>
         <a href="/report-types/{{rt.id}}/records/{{r.id}}/excel">Excel</a>
         <a href="/report-types/{{rt.id}}/records/{{r.id}}/delete" class="text-danger ms-2" onclick="return confirm('削除しますか?')">削除</a>
+        <button class="btn btn-sm btn-primary ms-2" type="submit" form="form{{r.id}}">保存</button>
       </td>
     </tr>
   {% endfor %}
@@ -48,6 +59,9 @@
 </table>
 <button class="btn btn-danger" type="submit" onclick="return confirm('選択したレコードを削除しますか?')">選択削除</button>
 </form>
+{% for r in records %}
+<form id="form{{r.id}}" method="post" action="/report-types/{{rt.id}}/records/{{r.id}}/update"></form>
+{% endfor %}
 <script>
 function toggleAll(source){
   document.querySelectorAll('input[name="record_ids"]').forEach(cb=>cb.checked=source.checked);

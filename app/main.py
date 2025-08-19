@@ -5,6 +5,8 @@ from fastapi.staticfiles import StaticFiles
 from sqlalchemy.orm import Session
 import io
 import csv
+import os
+import uuid
 import pandas as pd
 from pdfminer.high_level import extract_text
 from pydantic import BaseModel
@@ -85,14 +87,16 @@ async def show_records(request: Request, rt_id: int, db: Session = Depends(get_d
     rt = crud.get_report_type(db, rt_id)
     records = crud.fetch_report_records(db, rt)
     questions = crud.fetch_question_prompts(db, rt)
-    field_info = [
-        {
-            "name": f,
-            "question": questions.get(f, ""),
-            "type": rt.field_types[i] if rt.field_types else "qa",
-        }
-        for i, f in enumerate(rt.fields)
-    ]
+    type_map = {
+        "qa": "テキスト（一問一答）",
+        "free": "テキスト（自由入力）",
+        "image": "画像",
+        "video": "動画",
+    }
+    field_info = []
+    for i, f in enumerate(rt.fields):
+        t = rt.field_types[i] if rt.field_types else "qa"
+        field_info.append({"name": f, "question": questions.get(f, ""), "type": t, "type_label": type_map.get(t, t)})
     return templates.TemplateResponse("records.html", {"request": request, "rt": rt, "records": records, "fields_info": field_info, "title":rt.name, "active":"list"})
 
 @app.post("/report-types/{rt_id}/upload")
@@ -119,6 +123,18 @@ async def delete_record_get(rt_id: int, rec_id: int, db: Session = Depends(get_d
 @app.post("/report-types/{rt_id}/delete-records")
 async def delete_records(rt_id: int, record_ids: list[int] = Form(...), db: Session = Depends(get_db)):
     crud.delete_report_records(db, crud.get_report_type(db, rt_id), record_ids)
+    return RedirectResponse(url=f"/report-types/{rt_id}", status_code=302)
+
+@app.post("/report-types/{rt_id}/records/{rec_id}/update")
+async def update_record(rt_id: int, rec_id: int, request: Request, db: Session = Depends(get_db)):
+    rt = crud.get_report_type(db, rt_id)
+    form = await request.form()
+    data = {}
+    for f, t in zip(rt.fields, rt.field_types or []):
+        if t in ("qa", "free") and f in form:
+            data[f] = form[f]
+    if data:
+        crud.update_report_record(db, rt, rec_id, data)
     return RedirectResponse(url=f"/report-types/{rt_id}", status_code=302)
 
 @app.post("/report-types/{rt_id}/questions")
@@ -211,12 +227,6 @@ class ReportRequest(BaseModel):
 class ParseRequest(ReportRequest):
     text: str
 
-
-class RecordRequest(ReportRequest):
-    payload: dict = {}
-    free_text: str | None = None
-
-
 # API endpoint
 
 
@@ -262,14 +272,36 @@ async def api_report_types(db: Session = Depends(get_db)):
     return {"reports": [rt.name for rt in rts]}
 
 @app.post("/api/report/record")
-async def api_create_record(req: RecordRequest, db: Session = Depends(get_db)):
-    rt = crud.get_report_type_by_name(db, req.report_name)
+async def api_create_record(request: Request, db: Session = Depends(get_db)):
+    form = await request.form()
+    report_name = form.get("report_name")
+    if not report_name:
+        return {"error": "report_name required"}
+    rt = crud.get_report_type_by_name(db, report_name)
     if not rt:
         return {"error": "report type not found"}
-    data = req.payload or {}
+    data: dict[str, str] = {}
+    free_text = form.get("free_text")
+    os.makedirs("static/uploads", exist_ok=True)
+    for f, t in zip(rt.fields, rt.field_types or []):
+        if t in ("image", "video"):
+            file = form.get(f)
+            if isinstance(file, UploadFile):
+                contents = await file.read()
+                if len(contents) > 100 * 1024 * 1024:
+                    return {"error": "file too large"}
+                ext = os.path.splitext(file.filename)[1]
+                filename = f"{uuid.uuid4().hex}{ext}"
+                with open(os.path.join("static/uploads", filename), "wb") as out:
+                    out.write(contents)
+                data[f] = f"uploads/{filename}"
+        else:
+            value = form.get(f)
+            if value is not None:
+                data[f] = value
     free_fields = [f for f, t in zip(rt.fields, rt.field_types or []) if t == "free"]
-    if req.free_text and free_fields:
-        parsed = parse_text_to_fields(req.free_text, free_fields)
+    if free_text and free_fields:
+        parsed = parse_text_to_fields(free_text, free_fields)
         data.update(parsed)
     crud.insert_report_record(db, rt, data)
     return {"status": "ok"}
