@@ -275,14 +275,7 @@ async def api_report_types(db: Session = Depends(get_db)):
 async def api_create_record(request: Request, db: Session = Depends(get_db)):
     form = await request.form()
     logs: list[str] = []
-    texts: dict[str, str] = {}
-    files: dict[str, UploadFile] = {}
-    for k, v in form.multi_items():
-        if isinstance(v, UploadFile):
-            files[k] = v
-        else:
-            texts[k] = v
-    report_name = texts.get("report_name")
+    report_name = form.get("report_name")
     logs.append(f"report_name: {report_name}")
     if not report_name:
         return {"error": "report_name required", "logs": logs}
@@ -292,7 +285,7 @@ async def api_create_record(request: Request, db: Session = Depends(get_db)):
         return {"error": "report type not found", "logs": logs}
 
     data: dict[str, str] = {}
-    free_text = texts.get("free_text")
+    free_text = form.get("free_text")
     os.makedirs("static/uploads", exist_ok=True)
     field_types = rt.field_types or []
     type_map = {f: field_types[i] if i < len(field_types) else "text" for i, f in enumerate(rt.fields)}
@@ -301,16 +294,16 @@ async def api_create_record(request: Request, db: Session = Depends(get_db)):
     for f in rt.fields:
         t = type_map.get(f, "text")
         logs.append(f"checking: {f}, {t}")
+        value = form[f] if f in form else None
+        logs.append(f"received: {value}, {type(value)}")
         if t in ("image", "video"):
-            file = files.get(f)
-            logs.append(f"received: {file}, {type(file)}")
-            if file and file.filename:
-                contents = await file.read()
+            if isinstance(value, UploadFile) and value.filename:
+                contents = await value.read()
                 logs.append(f"read size: {len(contents)}")
                 if len(contents) > 100 * 1024 * 1024:
                     logs.append("file too large")
                     return {"error": "file too large", "logs": logs}
-                ext = os.path.splitext(file.filename)[1]
+                ext = os.path.splitext(value.filename)[1]
                 filename = f"{uuid.uuid4().hex}{ext}"
                 with open(os.path.join("static/uploads", filename), "wb") as out:
                     out.write(contents)
@@ -318,10 +311,12 @@ async def api_create_record(request: Request, db: Session = Depends(get_db)):
             else:
                 logs.append("not a valid UploadFile")
         else:
-            value = texts.get(f)
-            logs.append(f"text value: {value}")
-            if value is not None:
-                data[f] = value
+            if not isinstance(value, UploadFile):
+                logs.append(f"text value: {value}")
+                if value is not None:
+                    data[f] = value
+            else:
+                logs.append("unexpected UploadFile for text field")
 
     free_fields = [name for name, t in type_map.items() if t == "free"]
     if free_text and free_fields:
