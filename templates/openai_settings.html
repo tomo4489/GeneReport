@@ -1,0 +1,16 @@
+{% extends 'base.html' %}
+{% block content %}
+<h1>Azure OpenAI設定</h1>
+<form method="post">
+  <div class="mb-3">
+    <label class="form-label">エンドポイント</label>
+    <input type="text" name="endpoint" class="form-control" value="{{config.endpoint or ''}}">
+  </div>
+  <div class="mb-3">
+    <label class="form-label">APIキー</label>
+    <input type="text" name="key" class="form-control" value="{{config.key or ''}}">
+  </div>
+  <button class="btn btn-primary" type="submit">保存</button>
+  <a href="/settings" class="btn btn-secondary ms-2">戻る</a>
+</form>
+{% endblock %}
