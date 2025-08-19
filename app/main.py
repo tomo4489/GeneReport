@@ -1,4 +1,5 @@
-from fastapi import FastAPI, Depends, Form, Request, File, UploadFile
+from fastapi import FastAPI, Depends, Form, Request, File
+from starlette.datastructures import UploadFile
 from fastapi.responses import HTMLResponse, RedirectResponse, StreamingResponse
 from fastapi.templating import Jinja2Templates
 from fastapi.staticfiles import StaticFiles
@@ -275,7 +276,14 @@ async def api_report_types(db: Session = Depends(get_db)):
 async def api_create_record(request: Request, db: Session = Depends(get_db)):
     form = await request.form()
     logs: list[str] = []
-    report_name = form.get("report_name")
+    texts: dict[str, str] = {}
+    files: dict[str, UploadFile] = {}
+    for k, v in form.multi_items():
+        if isinstance(v, UploadFile):
+            files[k] = v
+        else:
+            texts[k] = v
+    report_name = texts.get("report_name")
     logs.append(f"report_name: {report_name}")
     if not report_name:
         return {"error": "report_name required", "logs": logs}
@@ -285,7 +293,7 @@ async def api_create_record(request: Request, db: Session = Depends(get_db)):
         return {"error": "report type not found", "logs": logs}
 
     data: dict[str, str] = {}
-    free_text = form.get("free_text")
+    free_text = texts.get("free_text")
     os.makedirs("static/uploads", exist_ok=True)
     field_types = rt.field_types or []
     type_map = {f: field_types[i] if i < len(field_types) else "text" for i, f in enumerate(rt.fields)}
@@ -295,9 +303,9 @@ async def api_create_record(request: Request, db: Session = Depends(get_db)):
         t = type_map.get(f, "text")
         logs.append(f"checking: {f}, {t}")
         if t in ("image", "video"):
-            file = form[f] if f in form else None
+            file = files.get(f)
             logs.append(f"received: {file}, {type(file)}")
-            if isinstance(file, UploadFile) and file.filename:
+            if file and file.filename:
                 contents = await file.read()
                 logs.append(f"read size: {len(contents)}")
                 if len(contents) > 100 * 1024 * 1024:
@@ -311,7 +319,7 @@ async def api_create_record(request: Request, db: Session = Depends(get_db)):
             else:
                 logs.append("not a valid UploadFile")
         else:
-            value = form.get(f)
+            value = texts.get(f)
             logs.append(f"text value: {value}")
             if value is not None:
                 data[f] = value
