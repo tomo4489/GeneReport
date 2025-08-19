@@ -1,4 +1,5 @@
-from fastapi import FastAPI, Depends, Form, UploadFile, File, Request
+from fastapi import FastAPI, Depends, Form, Request
+from starlette.datastructures import UploadFile
 from fastapi.responses import HTMLResponse, RedirectResponse, StreamingResponse
 from fastapi.templating import Jinja2Templates
 from fastapi.staticfiles import StaticFiles
@@ -274,34 +275,54 @@ async def api_report_types(db: Session = Depends(get_db)):
 @app.post("/api/report/record")
 async def api_create_record(request: Request, db: Session = Depends(get_db)):
     form = await request.form()
+    logs: list[str] = []
     report_name = form.get("report_name")
+    logs.append(f"report_name: {report_name}")
     if not report_name:
-        return {"error": "report_name required"}
+        return {"error": "report_name required", "logs": logs}
     rt = crud.get_report_type_by_name(db, report_name)
     if not rt:
-        return {"error": "report type not found"}
+        logs.append("report type not found")
+        return {"error": "report type not found", "logs": logs}
+
     data: dict[str, str] = {}
     free_text = form.get("free_text")
     os.makedirs("static/uploads", exist_ok=True)
-    for f, t in zip(rt.fields, rt.field_types or []):
+    field_types = rt.field_types or []
+    type_map = {f: field_types[i] if i < len(field_types) else "text" for i, f in enumerate(rt.fields)}
+    logs.append(f"rt.fields: {rt.fields}")
+    logs.append(f"form keys: {list(form.keys())}")
+    for f in rt.fields:
+        t = type_map.get(f, "text")
+        logs.append(f"checking: {f}, {t}")
         if t in ("image", "video"):
             file = form[f] if f in form else None
+            logs.append(f"received: {file}, {type(file)}")
             if isinstance(file, UploadFile) and file.filename:
                 contents = await file.read()
+                logs.append(f"read size: {len(contents)}")
                 if len(contents) > 100 * 1024 * 1024:
-                    return {"error": "file too large"}
+                    logs.append("file too large")
+                    return {"error": "file too large", "logs": logs}
                 ext = os.path.splitext(file.filename)[1]
                 filename = f"{uuid.uuid4().hex}{ext}"
                 with open(os.path.join("static/uploads", filename), "wb") as out:
                     out.write(contents)
                 data[f] = f"uploads/{filename}"
+            else:
+                logs.append("not a valid UploadFile")
         else:
             value = form.get(f)
+            logs.append(f"text value: {value}")
             if value is not None:
                 data[f] = value
-    free_fields = [f for f, t in zip(rt.fields, rt.field_types or []) if t == "free"]
+
+    free_fields = [name for name, t in type_map.items() if t == "free"]
     if free_text and free_fields:
+        logs.append(f"parsing free_text into: {free_fields}")
         parsed = parse_text_to_fields(free_text, free_fields)
         data.update(parsed)
+
     crud.insert_report_record(db, rt, data)
-    return {"status": "ok"}
+    logs.append("inserted record")
+    return {"status": "ok", "logs": logs}
