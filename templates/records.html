@@ -1,7 +1,6 @@
 {% extends 'base.html' %}
 {% block content %}
 <h1>{{rt.name}} のレコード一覧</h1>
-
 <h2 class="mt-4">質問一覧</h2>
 <form method="post" action="/report-types/{{rt.id}}/questions">
 <table class="table table-bordered">
