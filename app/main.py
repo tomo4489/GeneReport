@@ -271,53 +271,66 @@ async def api_report_types(db: Session = Depends(get_db)):
     rts = crud.get_report_types(db)
     return {"reports": [rt.name for rt in rts]}
 
+from typing import List, Optional
+from fastapi import FastAPI, Depends, Form, Request, File, UploadFile
+# ...省略...
+
 @app.post("/api/report/record")
-async def api_create_record(request: Request, db: Session = Depends(get_db)):
-    form = await request.form()
+async def api_create_record(
+    request: Request,
+    db: Session = Depends(get_db),
+    report_name: str = Form(...),
+    free_text: Optional[str] = Form(None),
+    files: List[UploadFile] = File(None)  # ← ファイルをここで受け取る
+):
     logs: list[str] = []
-    report_name = form.get("report_name")
     logs.append(f"report_name: {report_name}")
-    if not report_name:
-        return {"error": "report_name required", "logs": logs}
+
     rt = crud.get_report_type_by_name(db, report_name)
     if not rt:
         logs.append("report type not found")
         return {"error": "report type not found", "logs": logs}
 
     data: dict[str, str] = {}
-    free_text = form.get("free_text")
     os.makedirs("static/uploads", exist_ok=True)
-    field_types = rt.field_types or []
-    type_map = {f: field_types[i] if i < len(field_types) else "text" for i, f in enumerate(rt.fields)}
+
+    form = await request.form()
     logs.append(f"rt.fields: {rt.fields}")
     logs.append(f"form keys: {list(form.keys())}")
+
+    field_types = rt.field_types or []
+    type_map = {f: field_types[i] if i < len(field_types) else "text" for i, f in enumerate(rt.fields)}
+
     for f in rt.fields:
         t = type_map.get(f, "text")
         logs.append(f"checking: {f}, {t}")
-        value = form[f] if f in form else None
-        logs.append(f"received: {value}, {type(value)}")
+
+        # form にある通常入力
+        value = form.get(f)
+
+        # ファイル入力の場合（request.form() では str になるので files から探す）
+        file_obj = next((uf for uf in files or [] if uf.filename and uf.filename == value), None)
+
         if t in ("image", "video"):
-            if isinstance(value, UploadFile) and value.filename:
-                contents = await value.read()
+            if file_obj:
+                contents = await file_obj.read()
                 logs.append(f"read size: {len(contents)}")
                 if len(contents) > 100 * 1024 * 1024:
                     logs.append("file too large")
                     return {"error": "file too large", "logs": logs}
-                ext = os.path.splitext(value.filename)[1]
+                ext = os.path.splitext(file_obj.filename)[1]
                 filename = f"{uuid.uuid4().hex}{ext}"
                 with open(os.path.join("static/uploads", filename), "wb") as out:
                     out.write(contents)
                 data[f] = f"uploads/{filename}"
             else:
-                logs.append("not a valid UploadFile")
+                logs.append("no valid file found for this field")
         else:
-            if not isinstance(value, UploadFile):
+            if value:
+                data[f] = value
                 logs.append(f"text value: {value}")
-                if value is not None:
-                    data[f] = value
-            else:
-                logs.append("unexpected UploadFile for text field")
 
+    # free_text を GPT パース
     free_fields = [name for name, t in type_map.items() if t == "free"]
     if free_text and free_fields:
         logs.append(f"parsing free_text into: {free_fields}")
@@ -327,3 +340,4 @@ async def api_create_record(request: Request, db: Session = Depends(get_db)):
     crud.insert_report_record(db, rt, data)
     logs.append("inserted record")
     return {"status": "ok", "logs": logs}
+
