@@ -15,6 +15,7 @@ def get_report_table(report_type_id: int, fields: list[str]):
         metadata.create_all(tables=[table])
     return table
 
+
 def drop_report_table(report_type_id: int):
     table_name = f"report_{report_type_id}"
     if engine.dialect.has_table(engine.connect(), table_name):
@@ -33,6 +34,7 @@ def delete_records(report_type_id: int, ids: list[int]):
     table = Table(table_name, metadata, autoload_with=engine)
     stmt = table.delete().where(table.c.id.in_(ids))
     engine.execute(stmt)
+
 
 # Question table handling
 def get_question_table(report_type_id: int, fields: list[str]):
