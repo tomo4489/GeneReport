@@ -1,0 +1,26 @@
+{% extends 'base.html' %}
+{% block content %}
+<h1>API一覧</h1>
+<ul>
+  <li><strong>GET /api/report-types</strong> - 登録されている報告書名の一覧を取得</li>
+  <li><strong>POST /api/report/fields</strong> - 指定した報告書の項目名一覧を取得
+    <pre>{"report_name": "報告書名"}</pre></li>
+  <li><strong>POST /api/report/questions</strong> - 指定した報告書の質問文一覧を取得
+    <pre>{"report_name": "報告書名"}
+レスポンス例: {"questions": [{"field":"項目名","question":"質問文","type":"qa"},...]}</pre></li>
+  <li><strong>POST /api/report/record</strong> - 指定した報告書へレコードを追加
+    <p>multipart/form-data で送信します。<br>
+    フォームキーに項目名を指定し、テキスト項目は文字列、画像・動画項目はファイルを添付します（各100MBまで）。<br>
+    また <code>report_name</code> と、自由入力を解析させる場合は <code>free_text</code> を含めます。</p>
+    <pre>curl -X POST -F "report_name=サンプル" \
+-F "顧客の会社名=エンドユーザー株式会社" \
+-F "検査画像=@sample.jpg" \
+-F "free_text=まとめて入力した文章" \
+http://localhost:8000/api/report/record</pre>
+  </li>
+  <li><strong>POST /api/report/parse</strong> - テキストを解析してレコードを保存
+    <pre>{"report_name": "報告書名", "text": "..."}</pre></li>
+</ul>
+<p>詳細な仕様は <a href="/docs" target="_blank">Swagger UI</a> でも確認できます。</p>
+<a href="/settings" class="btn btn-secondary">戻る</a>
+{% endblock %}
