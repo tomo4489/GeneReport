@@ -1,8 +1,7 @@
-from fastapi import FastAPI, Depends, Form, Request, File
+from fastapi import FastAPI, Depends, Form, Request, File, UploadFile
 from fastapi.responses import HTMLResponse, RedirectResponse, StreamingResponse
 from fastapi.templating import Jinja2Templates
 from fastapi.staticfiles import StaticFiles
-from starlette.datastructures import UploadFile
 from sqlalchemy.orm import Session
 import io
 import csv
