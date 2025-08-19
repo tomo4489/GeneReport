@@ -1,5 +1,4 @@
-from fastapi import FastAPI, Depends, Form, Request, File
-from starlette.datastructures import UploadFile
+from fastapi import FastAPI, Depends, Form, Request, File, UploadFile
 from fastapi.responses import HTMLResponse, RedirectResponse, StreamingResponse
 from fastapi.templating import Jinja2Templates
 from fastapi.staticfiles import StaticFiles
