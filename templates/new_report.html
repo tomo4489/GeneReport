@@ -1,0 +1,101 @@
+{% extends 'base.html' %}
+{% block content %}
+<h1>報告書種別の作成</h1>
+<form method="post" enctype="multipart/form-data" id="manualForm">
+  <input type="hidden" name="source" value="manual">
+  <div class="mb-3">
+    <label class="form-label">名称</label>
+    <input class="form-control" type="text" name="name" required>
+  </div>
+  <div class="mb-3">
+    <label class="form-label">モード</label>
+    <div>
+      <div class="form-check form-check-inline">
+        <input class="form-check-input" type="radio" name="input_mode" value="struct" checked onchange="switchMode()">
+        <label class="form-check-label">ストラクトモード</label>
+      </div>
+      <div class="form-check form-check-inline">
+        <input class="form-check-input" type="radio" name="input_mode" value="smart" onchange="switchMode()">
+        <label class="form-check-label">スマートモード</label>
+      </div>
+    </div>
+  </div>
+
+  <div id="structSection">
+    <table class="table" id="structTable">
+      <thead><tr><th>項目名</th><th>質問文</th><th>タイプ</th><th></th></tr></thead>
+      <tbody></tbody>
+    </table>
+    <button type="button" class="btn btn-secondary" onclick="addStructField()">行を追加</button>
+  </div>
+
+  <div id="smartSection" style="display:none">
+    <div class="mb-3">
+      <label class="form-label">質問文</label>
+      <input class="form-control" type="text" name="prompt">
+    </div>
+    <table class="table" id="smartTable">
+      <thead><tr><th>項目名</th><th></th></tr></thead>
+      <tbody></tbody>
+    </table>
+    <button type="button" class="btn btn-secondary" onclick="addSmartField()">行を追加</button>
+  </div>
+
+  <div class="mt-3">
+    <button class="btn btn-success" type="submit">作成</button>
+  </div>
+</form>
+
+<hr>
+<h2>ExcelまたはPDFから取り込み</h2>
+<form method="post" enctype="multipart/form-data">
+  <input type="hidden" name="source" value="file">
+  <div class="mb-3">
+    <label class="form-label">名称</label>
+    <input class="form-control" type="text" name="name" required>
+  </div>
+  <div class="mb-3">
+    <input type="file" name="file" class="form-control" required>
+  </div>
+  <button class="btn btn-primary" type="submit">ファイルから作成</button>
+</form>
+
+<script>
+function addStructField(){
+  const tbody=document.querySelector('#structTable tbody');
+  const tr=document.createElement('tr');
+  tr.innerHTML=`<td><input class="form-control" name="fields" required></td>`+
+               `<td><input class="form-control" name="questions" required></td>`+
+               `<td><select class="form-select" name="types">`+
+               `<option value="qa">テキスト</option>`+
+               `<option value="image">画像</option>`+
+               `<option value="video">動画</option>`+
+               `</select></td>`+
+               `<td><button type="button" class="btn btn-sm btn-danger" onclick="this.parentElement.parentElement.remove()">X</button></td>`;
+  tbody.appendChild(tr);
+}
+
+function addSmartField(){
+  const tbody=document.querySelector('#smartTable tbody');
+  const tr=document.createElement('tr');
+  tr.innerHTML=`<td><input class="form-control" name="fields" required></td>`+
+               `<td><button type="button" class="btn btn-sm btn-danger" onclick="this.parentElement.parentElement.parentElement.removeChild(this.parentElement.parentElement)">X</button></td>`;
+  tbody.appendChild(tr);
+}
+
+function switchMode(){
+  const mode=document.querySelector('input[name="input_mode"]:checked').value;
+  const structSec=document.getElementById('structSection');
+  const smartSec=document.getElementById('smartSection');
+  structSec.style.display = mode==='struct'? '' : 'none';
+  smartSec.style.display = mode==='smart'? '' : 'none';
+  structSec.querySelectorAll('input,select').forEach(el=>el.disabled = mode!=='struct');
+  smartSec.querySelectorAll('input,select').forEach(el=>el.disabled = mode!=='smart');
+}
+
+addStructField();
+addSmartField();
+switchMode();
+</script>
+{% endblock %}
+
