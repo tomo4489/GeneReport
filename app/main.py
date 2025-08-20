@@ -11,7 +11,6 @@ import uuid
 import pandas as pd
 from pdfminer.high_level import extract_text
 from pydantic import BaseModel
-
 from .database import Base, engine, SessionLocal
 from . import models, crud
 from .openai_util import parse_text_to_fields, chat_reply
@@ -137,7 +136,6 @@ async def show_records(request: Request, rt_id: int, db: Session = Depends(get_d
         },
     )
 
-
 @app.post("/report-types/{rt_id}/upload")
 async def upload_excel(rt_id: int, file: UploadFile = File(...), db: Session = Depends(get_db)):
     rt = crud.get_report_type(db, rt_id)
@@ -148,7 +146,7 @@ async def upload_excel(rt_id: int, file: UploadFile = File(...), db: Session = D
         crud.insert_report_record(db, rt, data)
     return RedirectResponse(url=f"/report-types/{rt_id}", status_code=302)
 
-
+  
 @app.post("/report-types/{rt_id}/records/{rec_id}/delete")
 async def delete_record(rt_id: int, rec_id: int, db: Session = Depends(get_db)):
     crud.delete_report_records(db, crud.get_report_type(db, rt_id), [rec_id])
@@ -178,7 +176,7 @@ async def update_record(rt_id: int, rec_id: int, request: Request, db: Session =
         crud.update_report_record(db, rt, rec_id, data)
     return RedirectResponse(url=f"/report-types/{rt_id}", status_code=302)
 
-
+  
 @app.post("/report-types/{rt_id}/questions")
 async def update_questions(rt_id: int, request: Request, db: Session = Depends(get_db)):
     rt = crud.get_report_type(db, rt_id)
@@ -190,7 +188,6 @@ async def update_questions(rt_id: int, request: Request, db: Session = Depends(g
         prompt = form.get("prompt", "")
         crud.update_report_prompt(db, rt, prompt)
     return RedirectResponse(url=f"/report-types/{rt_id}", status_code=302)
-
 
 @app.get("/report-types/{rt_id}/delete")
 async def delete_report_type(rt_id: int, db: Session = Depends(get_db)):
@@ -332,7 +329,7 @@ async def api_report_types(db: Session = Depends(get_db)):
     rts = crud.get_report_types(db)
     return {"reports": [rt.name for rt in rts]}
 
-
+  
 @app.post("/api/report/record")
 async def api_create_record(request: Request, db: Session = Depends(get_db)):
     form = await request.form()

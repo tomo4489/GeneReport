@@ -10,7 +10,6 @@ from .report_dal import (
     rename_question_column,
 )
 
-
 def create_report_type(
     db: Session,
     name: str,
