@@ -341,23 +341,24 @@ async def api_create_record(request: Request, db: Session = Depends(get_db)):
     if not rt:
         logs.append("report type not found")
         return {"error": "report type not found", "logs": logs}
-    if rt.mode != "struct":
-        logs.append("report not in struct mode")
-        return {"error": "invalid mode", "logs": logs}
 
     data: dict[str, str] = {}
+    free_text = form.get("free_text")
     os.makedirs("static/uploads", exist_ok=True)
     field_types = rt.field_types or []
     type_map = {f: field_types[i] if i < len(field_types) else "text" for i, f in enumerate(rt.fields)}
     logs.append(f"rt.fields: {rt.fields}")
     logs.append(f"form keys: {list(form.keys())}")
+
     for f in rt.fields:
         t = type_map.get(f, "text")
         logs.append(f"checking: {f}, {t}")
         value = form[f] if f in form else None
         logs.append(f"received: {value}, {type(value)}")
+
         if t in ("image", "video"):
-            if isinstance(value, UploadFile) and value.filename:
+            # ✅ isinstance の代わりに hasattr を使う
+            if value and hasattr(value, "filename") and value.filename:
                 contents = await value.read()
                 logs.append(f"read size: {len(contents)}")
                 if len(contents) > 100 * 1024 * 1024:
@@ -369,14 +370,25 @@ async def api_create_record(request: Request, db: Session = Depends(get_db)):
                     out.write(contents)
                 data[f] = f"uploads/{filename}"
             else:
-                logs.append("not a valid UploadFile")
+                logs.append("not a valid file upload")
         else:
-            if not isinstance(value, UploadFile):
+            # text fields
+            if not (value and hasattr(value, "filename")):  # ← ファイルじゃない場合のみ
                 logs.append(f"text value: {value}")
                 if value is not None:
                     data[f] = value
             else:
                 logs.append("unexpected UploadFile for text field")
+
+    free_fields = [name for name, t in type_map.items() if t == "free"]
+    if free_text and free_fields:
+        logs.append(f"parsing free_text into: {free_fields}")
+        parsed = parse_text_to_fields(free_text, free_fields)
+        data.update(parsed)
+
+    crud.insert_report_record(db, rt, data)
+    logs.append("inserted record")
+    return {"status": "ok", "logs": logs}
 
     crud.insert_report_record(db, rt, data)
     logs.append("inserted record")
